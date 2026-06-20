@@ -1,0 +1,48 @@
+name: 🛡️ Security Report
+description: Report a security vulnerability privately and securely.
+labels: ["security", "critical"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **WARNING:** If you have discovered a security vulnerability, please do NOT report it via a public issue.
+        Please follow the private disclosure process described in our [SECURITY.md](../../SECURITY.md) policy.
+        Use GitHub Private Vulnerability Reporting if possible.
+  - type: textarea
+    id: vulnerability-details
+    attributes:
+      label: Vulnerability Details
+      description: Description of the security vulnerability.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What is the potential impact? (e.g., Fund risk, Credential leakage, RCE)
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Proof of Concept / Reproduction
+      description: How can the vulnerability be reproduced? (Do NOT include live secrets)
+    validations:
+      required: true
+  - type: textarea
+    id: system-version
+    attributes:
+      label: Affected Versions
+      description: Which versions of the system are affected?
+      placeholder: e.g., v1.1.x, v1.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: disclosure-confirmation
+    attributes:
+      label: Disclosure Confirmation
+      description: I have read the SECURITY.md and understand that this report will NOT be public initially.
+      options:
+        - "I confirm and will follow private disclosure"
+    validations:
+      required: true

@@ -1,0 +1,143 @@
+[build-system]
+requires = ["setuptools>=65.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mt5-ai-xauusd-trader"
+version = "1.1.0-rc7"
+description = "AI/ML Trading Bot for MetaTrader 5 - XAUUSD Gold Trading"
+authors = [{name = "triqbit"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "torch==2.5.1+cpu",
+    "stable-baselines3==2.5.0",
+    "gymnasium==1.0.0",
+    "numpy==1.26.4",
+    "scipy==1.15.3",
+    "scikit-learn==1.6.1",
+    "pandas==2.2.3",
+    "TA-Lib==0.6.8",
+    "requests==2.34.2",
+    "aiohttp==3.14.1",
+    "httpx==0.28.1",
+    "psycopg2-binary==2.9.12",
+    "sqlalchemy==2.0.50",
+    "alembic==1.18.4",
+    "redis==8.0.0",
+    "prometheus-client==0.25.0",
+    "structlog==25.5.0",
+    "rich==13.9.4",
+    "tqdm==4.68.2",
+    "jinja2==3.1.6",
+    "fastapi==0.137.0",
+    "uvicorn[standard]==0.34.0",
+    "python-dotenv==1.2.2",
+    "pydantic==2.13.4",
+    "pydantic-settings==2.14.2",
+    "tomli==2.4.1",
+    "python-dateutil==2.9.0.post0",
+    "nest-asyncio==1.6.0",
+    "pytz==2026.2",
+    "click==8.4.1",
+    "tabulate==0.9.0",
+    "joblib==1.5.3",
+    "python-telegram-bot==22.8",
+    "psutil==7.2.2",
+    "optuna==4.9.0",
+    "python-socketio==5.14.0",
+    "MetaTrader5==5.0.5735; sys_platform == 'win32'",
+    "metaapi-cloud-sdk==29.1.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit==4.6.0",
+    "ruff==0.15.17",
+    "mypy==2.1.0",
+    "pip-audit",
+]
+test = [
+    "pytest==9.1.0",
+    "pytest-asyncio==1.4.0",
+    "pytest-mock==3.15.1",
+    "pytest-cov==7.1.0",
+    "hypothesis==6.155.2",
+    "types-redis==4.6.0.20241004",
+    "types-requests==2.33.0.20260518",
+    "types-python-dateutil==2.9.0.20260518",
+    "types-setuptools==82.0.0.20260518",
+    "types-PyYAML==6.0.12.20260518",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+# ===========================================================
+# Ruff — single tool for lint + format + import sorting
+# Replaces: black, isort, flake8, pyupgrade
+# ===========================================================
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.format]
+# ruff format is the black-compatible formatter
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint]
+# Rule sets enabled:
+#   E/W = pycodestyle errors/warnings
+#   F   = pyflakes (undefined names, unused imports)
+#   I   = isort (import sorting — enforced)
+#   B   = flake8-bugbear (likely bugs and design issues)
+#   C4  = flake8-comprehensions (simplify comprehensions)
+#   SIM = flake8-simplify
+#   RUF = ruff-specific rules
+#
+# NOTE: UP (pyupgrade) intentionally excluded until source files
+# are migrated from typing.Dict/List/Optional to built-in generics.
+# Track in: https://github.com/triqbit/mt5-ai-xauusd-trader/issues
+select = ["E", "W", "F", "I", "B", "C4", "SIM", "RUF"]
+ignore = [
+    "E501",   # line-length — handled by ruff format
+    "B008",   # function calls in default args (FastAPI Depends pattern)
+    "RUF012", # mutable class attrs — false positives in pydantic models
+    "SIM108", # ternary operator — sometimes less readable
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+combine-as-imports = true
+force-single-line = false
+split-on-trailing-comma = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "B011"]   # assert + raise-without-from OK in tests
+
+# ===========================================================
+# mypy
+# ===========================================================
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+# ===========================================================
+# pytest
+# ===========================================================
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = ["tests"]
+addopts = "--strict-markers --verbose"

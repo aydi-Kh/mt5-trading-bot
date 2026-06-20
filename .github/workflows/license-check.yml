@@ -1,0 +1,63 @@
+name: "🗺️ Atlas: License Compliance Check"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  license-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-licenses==5.5.5
+
+          # Install torch/torchvision from CPU index to save time/space
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+          # Install dependencies from available requirements files
+          # Ignore failures for platform-specific pins (like MetaTrader5 on Linux)
+          for f in requirements.txt requirements-ci.txt requirements-linux.txt; do
+            if [ -f "$f" ]; then
+              grep -vE "TA-Lib|MetaTrader5|metaapi-cloud-sdk" "$f" > "${f}.scan"
+              pip install -r "${f}.scan" || true
+            fi
+          done
+
+      - name: Run License Scan
+        run: |
+          # Enforce allowed licenses according to docs/LICENSE_COMPLIANCE.md
+          # Explicitly ALLOWED: MIT, BSD, Apache, MPL, LGPL, PSF, Unlicense, ISC, Other/Proprietary, UNKNOWN (verified), Python, NVIDIA.
+          # Explicitly BLOCKED: GPL, AGPL, CC-BY-NC.
+          # pip-licenses uses a semicolon-separated list for --allow-only.
+          pip-licenses \
+            --from=all \
+            --allow-only "MIT;BSD;Apache;MPL;LGPL;PSF;Unlicense;ISC;Other/Proprietary;UNKNOWN;Python;NVIDIA;Dual License" \
+            --partial-match \
+            --ignore-packages pip pip-licenses prettytable wcwidth setuptools wheel
+
+      - name: Generate Compliance Report
+        run: |
+          pip-licenses \
+            --from=all \
+            --with-authors \
+            --with-urls \
+            --format=markdown \
+            --output-file=docs/DEPENDENCY_LICENSES.md \
+            --ignore-packages pip pip-licenses prettytable wcwidth setuptools wheel
+
+      - name: Upload Compliance Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-compliance-report
+          path: docs/DEPENDENCY_LICENSES.md

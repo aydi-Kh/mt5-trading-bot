@@ -1,0 +1,6 @@
+# Upstream constraint from metaapi-cloud-sdk
+python-socketio
+# Dependency of metaapi-cloud-sdk
+python-engineio
+# Known vulnerability in joblib 1.5.3, but required for this environment's scikit-learn version
+joblib

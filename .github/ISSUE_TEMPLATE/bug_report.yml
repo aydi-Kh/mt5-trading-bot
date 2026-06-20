@@ -1,0 +1,90 @@
+name: 🐛 Bug Report
+description: Report a bug to help us improve system reliability and trading safety.
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please ensure you have checked for existing issues before submitting a new one.
+        **Note:** For critical production outages, follow the escalation path in `docs/runbooks/README.md`.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe the issue here...
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How critical is this issue to trading operations? (Aligned with SLO Targets in docs/SLO_TARGETS.md)
+      options:
+        - P0: Critical (Trading blocked / Capital at risk / Production outage)
+        - P1: High (Core feature broken / Significant operational degradation)
+        - P2: Medium (Non-critical feature broken / Performance degradation)
+        - P3: Low (UI/UX / Minor issue / Enhancement suggestion)
+    validations:
+      required: true
+  - type: textarea
+    id: operational-impact
+    attributes:
+      label: Operational Impact
+      description: What is the impact on live trading or system reliability?
+      placeholder: e.g., "The bot is failing to close positions, leading to unmanaged risk."
+    validations:
+      required: true
+  - type: input
+    id: system-version
+    attributes:
+      label: System Version
+      description: What version of the system are you running? (Check pyproject.toml or logs)
+      placeholder: e.g., v1.2.0
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Info
+      description: OS, Python version, MT5 version, Broker/Server details.
+      placeholder: |
+        - OS: Ubuntu 22.04
+        - Python: 3.11
+        - Mode: Live/Demo
+        - Deployment: Docker/Bare-metal
+        - Broker/Server: IC Markets / MetaQuotes-Demo
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Start the bot with `python main.py ...`
+        2. Wait for a trade signal...
+        3. Observe the error in the logs...
+    validations:
+      required: true
+  - type: textarea
+    id: audit-ids
+    attributes:
+      label: Related Audit IDs / Decision Traces
+      description: Provide any relevant IDs from `audit_log` or `risk_events`.
+      placeholder: e.g., trade_id: 12345, event_id: 9876
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Please provide relevant logs (ensure secrets are redacted).
+      render: shell
+    validations:
+      required: true

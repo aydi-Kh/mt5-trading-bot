@@ -1,0 +1,86 @@
+# config/trading_rules.yaml
+#
+# T1.1 deliverable — externalized trading rules so ak_agent_v3.py stays
+# declarative and under the 400-line budget. Validated at startup by
+# config/schema.py (TradingConfig.from_yaml) — invalid values here crash
+# the agent on boot rather than silently misbehaving at runtime.
+
+instruments:
+  - symbol: "EURUSD"
+    role: "primary"
+    pip_value: 0.0001
+    max_spread_pips: 2.0
+  - symbol: "GBPUSD"
+    role: "smt_pair"
+    smt_correlation_with: "EURUSD"
+    pip_value: 0.0001
+    max_spread_pips: 2.5
+  - symbol: "XAUUSD"
+    role: "commodity_test"
+    pip_value: 0.01
+    max_spread_pips: 30.0
+
+timeframes:
+  structure: "H1"
+  confirmation: "M15"
+  execution: "M5"
+
+supertrend:
+  timeframe: "M15"
+  atr_period: 10
+  multiplier: 3.0
+  source: "close"
+
+order_block:
+  freshness:
+    max_age_candles_h1: 50          # OB invalid if older than this (T1.2b)
+    mitigation_threshold_pct: 0.20  # >20% through OB = invalid (auto-reject #1)
+  volume_confirmation:
+    min_relative_volume: 1.5        # vs 20-period average
+  session_filter:
+    valid_sessions: ["london", "newyork"]
+    session_times_utc:
+      london: ["07:00", "16:00"]
+      newyork: ["12:00", "21:00"]
+
+smt:
+  lookback_candles_m15: 20
+  divergence_threshold_pct: 0.15
+  rules:
+    aligned_size_pct: 100
+    divergent_size_pct: 50
+    counter_trend_action: "no_trade"
+
+risk_management:
+  scalping:
+    timeframes: ["M5", "M15"]
+    min_rr: 2.0
+    max_sl_pct_account: 0.3
+  swing:
+    timeframes: ["H4", "D1"]
+    min_rr: 4.0
+    max_sl_pct_account: 1.0
+
+auto_reject:
+  - id: "mitigated_ob"
+    condition: "price_through_ob_pct > 0.20"
+  - id: "unstable_supertrend"
+    condition: "supertrend_flip_within_n_candles <= 2"
+  - id: "insufficient_rr"
+    condition: "tp_distance < (2 * sl_distance)"
+  - id: "spread_prohibitive"
+    condition: "spread > (0.30 * ob_size)"
+  - id: "news_blackout"
+    condition: "minutes_to_major_news < 30"
+
+execution:
+  m5_fill_timeout_candles: 3
+  order_type: "limit"
+
+data:
+  historical_fetch:
+    primary_source: "mt5_copy_rates"
+    fallback_chain: ["broker_rest", "dukascopy"]
+    min_required_bars_h1: 17520     # 2 years — see T3.1 risk note if broker caps at 10k
+    storage_format: "parquet"
+    storage_path: "./data/historical/"

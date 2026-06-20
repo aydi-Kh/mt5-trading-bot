@@ -1,0 +1,321 @@
+# {{ title }}
+
+---
+**Report Metadata**
+- **Date:** {{ timestamp }}
+- **Author:** {{ author }}
+- **Status:** {{ overall_status }}
+- **Scope:** Research and Strategy Audit
+---
+
+{% set ns = namespace(count=1) %}
+## Table of Contents
+{{ ns.count }}. [Executive Summary](#executive-summary)
+{% set ns.count = ns.count + 1 %}
+{% if regime_analysis %}{{ ns.count }}. [Market Regime Analysis](#{{ ns.count }}-market-regime-analysis)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if stress_tests %}{{ ns.count }}. [Stress Test Outcomes](#{{ ns.count }}-stress-test-outcomes)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if hyperparameter_robustness %}{{ ns.count }}. [Hyperparameter Robustness](#{{ ns.count }}-hyperparameter-robustness)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if trade_patterns %}{{ ns.count }}. [Trade Pattern Findings](#{{ ns.count }}-trade-pattern-findings-journal-mining)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if model_drift %}{{ ns.count }}. [Model Drift Observations](#{{ ns.count }}-model-drift-observations)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if allocation_insights %}{{ ns.count }}. [Capital Allocation Insights](#{{ ns.count }}-capital-allocation-insights)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if risk_audit %}{{ ns.count }}. [Risk & Compliance Audit](#{{ ns.count }}-risk--compliance-audit)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if data_quality %}{{ ns.count }}. [Data Integrity & Quality](#{{ ns.count }}-data-integrity--quality)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if benchmarks %}{{ ns.count }}. [Benchmark Comparisons](#{{ ns.count }}-benchmark-comparisons)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if rl_evaluation %}{{ ns.count }}. [RL Agent Evaluation](#{{ ns.count }}-rl-agent-evaluation)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if rare_events %}{{ ns.count }}. [Rare Event Simulations](#{{ ns.count }}-rare-event-simulations)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if calibration_analysis %}{{ ns.count }}. [Confidence Calibration & Reliability](#{{ ns.count }}-confidence-calibration--reliability)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if execution_quality %}{{ ns.count }}. [Execution Quality & Alpha Decay](#{{ ns.count }}-execution-quality--alpha-decay)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if strategic_confluence %}{{ ns.count }}. [Strategic Confluence Analysis](#{{ ns.count }}-strategic-confluence-analysis)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{% if methodology %}{{ ns.count }}. [Methodology & Audit Trail](#{{ ns.count }}-methodology--audit-trail)
+{% set ns.count = ns.count + 1 %}{% endif %}
+{{ ns.count }}. [Conclusion & Recommendations](#conclusion--recommendations)
+
+---
+
+{% set ns.count = 1 %}
+## Executive Summary
+{{ executive_summary }}
+
+---
+
+{% if regime_analysis %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Market Regime Analysis
+**Summary:** {{ regime_analysis.summary }}
+
+| Regime | Frequency | Avg Duration | Profitability |
+|--------|-----------|--------------|---------------|
+{% for r in regime_analysis.regimes %}
+| {{ r.label }} | {{ r.frequency_pct }}% | {{ r.avg_duration_bars }} bars | {{ r.profitability }} |
+{% endfor %}
+
+**Transition Insights:**
+{{ regime_analysis.transition_insights }}
+{% endif %}
+
+{% if stress_tests %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Stress Test Outcomes
+**Resilience Score:** {{ stress_tests.resilience_score }}/100 | **Sharpe Decay:** {{ (stress_tests.sharpe_decay * 100)|round(1) }}% | **Win Rate Decay:** {{ (stress_tests.win_rate_decay * 100)|round(1) }}%
+
+| Scenario | Total Return | Max Drawdown | Sharpe | Recov | PF | Outcome |
+|----------|--------------|--------------|--------|-------|----|---------|
+| **Baseline** | {{ stress_tests.baseline.total_return }} | {{ stress_tests.baseline.max_drawdown }} | {{ stress_tests.baseline.sharpe }} | {{ stress_tests.baseline.recovery_factor }} | {{ stress_tests.baseline.profit_factor }} | - |
+{% for s in stress_tests.scenarios %}
+| {{ s.name }} | {{ s.total_return }} | {{ s.max_drawdown }} | {{ s.sharpe }} | {{ s.recovery_factor }} | {{ s.profit_factor }} | {{ s.outcome }} |
+{% endfor %}
+
+**Fragility Indicators:**
+{% for indicator in stress_tests.fragility_indicators %}
+- {{ indicator }}
+{% endfor %}
+
+**Failure Points:**
+{% for point in stress_tests.failure_points %}
+- {{ point }}
+{% endfor %}
+
+**Analytical Insights:**
+{{ stress_tests.insights }}
+{% endif %}
+
+{% if hyperparameter_robustness %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Hyperparameter Robustness
+**Stability Score:** {{ hyperparameter_robustness.stability_score }}/100 | **Grade:** {{ hyperparameter_robustness.grade }} | **WFE:** {{ hyperparameter_robustness.walk_forward_efficiency|round(2) }}
+
+| Parameter | Range Tested | Optimal Value | Sensitivity |
+|-----------|--------------|---------------|-------------|
+{% for p in hyperparameter_robustness.parameters %}
+| {{ p.name }} | {{ p.range }} | {{ p.optimal }} | {{ p.sensitivity }} |
+{% endfor %}
+
+**Optimization Insights:**
+{{ hyperparameter_robustness.insights }}
+{% endif %}
+
+{% if trade_patterns %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Trade Pattern Findings (Journal Mining)
+**Key Insight:** {{ trade_patterns.primary_insight }}
+
+### Profitable Concentrations
+| Attribute | Value | Win Rate | Profit Factor | Trades |
+|-----------|-------|----------|---------------|--------|
+{% for c in trade_patterns.concentrations %}
+| {{ c.attribute }} | {{ c.value }} | {{ (c.win_rate * 100)|round(1) }}% | {{ c.profit_factor|round(2) }} | {{ c.total_trades }} |
+{% endfor %}
+
+{% if trade_patterns.motifs %}
+### Signal Motifs (Performance Clusters)
+| Algorithm | Session | Volatility | Confidence | Frequency | Win Rate | Exp | Eff |
+|-----------|---------|------------|------------|-----------|----------|-----|-----|
+{% for m in trade_patterns.motifs %}
+| {{ m.algorithm }} | {{ m.session }} | {{ m.volatility_bucket }} | {{ m.confidence_bucket }} | {{ m.frequency }} | {{ (m.win_rate * 100)|round(1) }}% | {{ m.expectancy|round(2) }} | {{ m.efficiency_ratio|round(2) }} |
+{% endfor %}
+{% endif %}
+
+{% if trade_patterns.combinations %}
+### Signal Combinations (Toxic vs Golden)
+| Pattern | Frequency | Type | Exp | Eff |
+|---------|-----------|------|-----|-----|
+{% for comb in trade_patterns.combinations %}
+| {{ comb.patterns|join(', ') }} | {{ comb.frequency }} | {{ 'TOXIC' if comb.is_toxic else 'GOLDEN' }} | {{ comb.expectancy|round(2) }} | {{ comb.efficiency_ratio|round(2) }} |
+{% endfor %}
+{% endif %}
+
+### Behavioral Risks
+{% for risk in trade_patterns.behavioral_risks %}
+- **{{ risk.type }}:** {{ risk.description }}
+{% endfor %}
+{% endif %}
+
+{% if model_drift %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Model Drift Observations
+| Metric | Baseline | Current | Drift | PSI | Status |
+|--------|----------|---------|-------|-----|--------|
+{% for m in model_drift.metrics %}
+| {{ m.name }} | {{ m.baseline }} | {{ m.current }} | {{ m.drift_pct }}% | {{ m.psi_score|round(3) }} | {{ m.status }} |
+{% endfor %}
+
+**Feature Importance Shifts:**
+{{ model_drift.feature_shifts }}
+{% endif %}
+
+{% if allocation_insights %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Capital Allocation Insights
+**Portfolio Heat:** {{ allocation_insights.total_heat_pct|round(1) }}% | **Diversification Score:** {{ allocation_insights.diversification_score|round(2) }} | **Compliant:** {{ 'YES' if allocation_insights.is_compliant else 'NO' }}
+
+| Symbol/Family | Allocated | Heat | Performance Multiplier |
+|---------------|-----------|------|------------------------|
+{% for a in allocation_insights.allocations %}
+| {{ a.name }} | {{ a.amount }} | {{ a.heat_pct }}% | {{ a.multiplier }} |
+{% endfor %}
+
+**Rejection Summary:**
+{% for reason, count in allocation_insights.rejection_summary.items() %}
+- {{ reason }}: {{ count }} occurrences
+{% endfor %}
+{% endif %}
+
+{% if benchmarks %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Benchmark Comparisons
+| Strategy | Return | Sharpe | MaxDD | CVaR | PF | Recov | SQN | IR | Omega | Ulcer | Lake | Tail | CSR | P-Value |
+|----------|--------|--------|-------|------|----|-------|-----|----|-------|-------|------|------|-----|---------|
+{% for b in benchmarks.comparisons %}
+| {{ b.name }} | {{ b.total_return }} | {{ b.sharpe }} | {{ b.max_drawdown }} | {{ b.expected_shortfall }} | {{ b.profit_factor }} | {{ b.recovery_factor }} | {{ b.sqn }} | {{ b.information_ratio }} | {{ b.omega_ratio }} | {{ b.ulcer_index }} | {{ b.lake_ratio }} | {{ b.tail_ratio }} | {{ b.common_sense_ratio }} | {{ b.p_value }} |
+{% endfor %}
+
+**Statistical Significance:**
+{{ benchmarks.statistical_summary }}
+{% endif %}
+
+{% if rl_evaluation %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. RL Agent Evaluation
+**Summary:** {{ rl_evaluation.comparison_summary }}
+
+| Agent | Sharpe | Sortino | Vol | PF | Exp | MaxDD | Recov | CSR | G2P | Lake | Tail | SQN | Sess Div | Flip Rate |
+|-------|--------|---------|-----|----|-----|-------|-------|-----|-----|------|------|-----|----------|-----------|
+{% for m in rl_evaluation.metrics %}
+| {{ m.agent_name }} | {{ m.sharpe|round(2) }} | {{ m.sortino|round(2) }} | {{ (m.volatility * 100)|round(1) }}% | {{ m.profit_factor|round(2) }} | {{ m.expectancy|round(2) }} | {{ (m.max_dd * 100)|round(1) }}% | {{ m.recovery_factor|round(2) }} | {{ m.common_sense_ratio|round(2) }} | {{ m.gain_to_pain_ratio|round(2) }} | {{ m.lake_ratio|round(2) }} | {{ m.tail_ratio|round(2) }} | {{ m.sqn|round(2) }} | {{ m.session_diversification|round(2) }} | {{ m.flip_flop_rate|round(2) }} |
+{% endfor %}
+
+### Attribution & Exposure
+| Agent | Avg Hold | Trade Freq | Action Entropy | Comm. Drag | Profit Conc. | Regime Stability | MAE (Avg) | MFE (Avg) |
+|-------|----------|------------|----------------|------------|--------------|------------------|-----------|-----------|
+{% for m in rl_evaluation.metrics %}
+| {{ m.agent_name }} | {{ m.avg_hold_time|round(1) }}h | {{ m.trade_frequency|round(1) }}/d | {{ m.action_entropy|round(2) }} | {{ (m.commission_drag * 100)|round(2) }}% | {{ (m.profit_concentration * 100)|round(1) }}% | {{ m.regime_stability|round(2) }} | {{ (m.mae_avg * 100)|round(2) }}% | {{ (m.mfe_avg * 100)|round(2) }}% |
+{% endfor %}
+{% endif %}
+
+{% if rare_events %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Rare Event Simulations
+**Insights:** {{ rare_events.insights }}
+
+| Event Type | Peak Impact | Realized Vol | Recovery | Bars to Recovery |
+|------------|-------------|--------------|----------|------------------|
+{% for s in rare_events.scenarios %}
+| {{ s.event_type }} | {{ (s.peak_impact_pct * 100)|round(2) }}% | {{ s.realized_volatility|round(4) }} | {{ (s.recovery_attained * 100)|round(1) }}% | {{ s.recovery_bars }} |
+{% endfor %}
+{% endif %}
+
+{% if calibration_analysis %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Confidence Calibration & Reliability
+**Status:** {{ calibration_analysis.status }} | **ECE:** {{ calibration_analysis.ece|round(4) }} | **Brier Score:** {{ calibration_analysis.brier_score|round(4) }}
+
+| Confidence Range | Accuracy | Avg Confidence | Samples |
+|------------------|----------|----------------|---------|
+{% for b in calibration_analysis.buckets %}
+| {{ b.range }} | {{ (b.accuracy * 100)|round(1) }}% | {{ (b.confidence * 100)|round(1) }}% | {{ b.samples }} |
+{% endfor %}
+
+**Operational Insight:**
+{{ calibration_analysis.reliability_insight }}
+**Optimal Threshold Recommendation:** {{ calibration_analysis.optimal_threshold|round(2) }}
+{% endif %}
+
+{% if execution_quality %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Execution Quality & Alpha Decay
+**Efficiency Score:** {{ execution_quality.efficiency_score|round(1) }}/100
+
+| Metric | Value | Status |
+|--------|-------|--------|
+{% for m in execution_quality.metrics %}
+| {{ m.name }} | {{ m.value }} | {{ m.status }} |
+{% endfor %}
+
+**Opportunity Cost (Blocked Signals):** {{ execution_quality.opportunity_cost }}
+*Analyzed {{ execution_quality.trade_count }} executed trades and {{ execution_quality.rejected_count }} rejected signals.*
+{% endif %}
+
+{% if strategic_confluence %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Strategic Confluence Analysis
+**Overall Confluence Score:** {{ (strategic_confluence.confluence_score * 100)|round(1) }}%
+
+| Alignment Category | Score |
+|--------------------|-------|
+| Market Regime | {{ (strategic_confluence.regime_alignment * 100)|round(1) }}% |
+| Trading Session | {{ (strategic_confluence.session_alignment * 100)|round(1) }}% |
+| Volatility State | {{ (strategic_confluence.volatility_alignment * 100)|round(1) }}% |
+
+**Strategic Insights:**
+{{ strategic_confluence.insights }}
+{% endif %}
+
+{% if risk_audit %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Risk & Compliance Audit
+**Audit Status:** {{ risk_audit.status }}
+
+- **Portfolio Heat:** {{ (risk_audit.portfolio_heat * 100)|round(1) }}%
+- **Diversification (HHI):** {{ risk_audit.hhi_score|round(3) }}
+- **Drawdown Limit Compliance:** {{ 'PASS' if risk_audit.drawdown_limit_compliance else 'FAIL' }}
+- **Leverage Compliance:** {{ 'PASS' if risk_audit.leverage_compliance else 'FAIL' }}
+
+**Auditor Notes:**
+{{ risk_audit.audit_notes }}
+{% endif %}
+
+{% if data_quality %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Data Integrity & Quality
+**Data Status:** {{ data_quality.status }}
+
+- **Feed Health:** {{ data_quality.feed_health|round(1) }}%
+- **Missing Bars:** {{ data_quality.missing_bars }}
+- **Stale Bars:** {{ data_quality.stale_bars }}
+- **Gaps Detected:** {{ data_quality.gap_count }}
+- **Primary Source:** {{ data_quality.data_source }}
+{% endif %}
+
+{% if methodology %}
+{% set ns.count = ns.count + 1 %}
+## {{ ns.count }}. Methodology & Audit Trail
+- **Data Source:** {{ methodology.data_source }}
+- **Backtest Engine:** {{ methodology.backtest_engine }}
+- **Lookback Period:** {{ methodology.lookback_period }}
+
+### Core Assumptions
+{% for assumption in methodology.assumptions %}
+- {{ assumption }}
+{% endfor %}
+
+### Risk Limits Applied
+{% for limit in methodology.risk_limits %}
+- {{ limit }}
+{% endfor %}
+{% endif %}
+
+---
+## Conclusion & Recommendations
+**Strategic Conclusion:**
+{{ conclusion }}
+
+{% if recommendations %}
+**Actionable Recommendations:**
+{% for rec in recommendations %}
+- {{ rec }}
+{% endfor %}
+{% endif %}

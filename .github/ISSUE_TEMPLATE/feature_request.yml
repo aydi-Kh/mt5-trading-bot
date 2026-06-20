@@ -1,0 +1,76 @@
+name: 🚀 Feature Request
+description: Suggest a new capability or enhancement for the trading system.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the feature is.
+    validations:
+      required: true
+  - type: textarea
+    id: problem-solved
+    attributes:
+      label: Problem Solved
+      description: Is your feature request related to a problem? Please describe.
+    validations:
+      required: true
+  - type: textarea
+    id: business-value
+    attributes:
+      label: Business Value / ROI
+      description: What is the expected benefit or value? (e.g., higher Sharpe ratio, reduced latency, improved observability)
+      placeholder: e.g., "Expected to reduce slippage by 15% through optimized order execution."
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Implementation Priority
+      description: How urgent is this feature for the product roadmap?
+      options:
+        - Must Have (Critical for upcoming release)
+        - Should Have (High value, non-blocking)
+        - Could Have (Nice to have)
+        - Won't Have (for now)
+    validations:
+      required: true
+  - type: dropdown
+    id: strategic-alignment
+    attributes:
+      label: Strategic Alignment
+      description: How does this align with the project's goals?
+      options:
+        - Risk Management / Safety
+        - Performance / Alpha
+        - Observability / Governance
+        - Developer Experience
+        - Infrastructure / Reliability
+    validations:
+      required: true
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Target Use Cases
+      description: Who will benefit from this feature and in what scenario?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+  - type: textarea
+    id: risk-assessment
+    attributes:
+      label: Risk Assessment
+      description: Does this feature introduce new risks (e.g., higher latency, dependency bloat, capital risk)?
+      placeholder: "No new dependencies; potential 5ms increase in inference latency."
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context or screenshots about the feature request here.

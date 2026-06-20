@@ -1,0 +1,63 @@
+# ===========================================================
+# Pre-commit hooks — self-enforcing formatting, imports, security
+#
+# Install locally:   pip install pre-commit && pre-commit install
+# Run manually:      pre-commit run --all-files
+# CI also runs:      pre-commit run --all-files  (in quality job)
+# ===========================================================
+
+default_language_version:
+  python: python3.11
+
+repos:
+  # -----------------------------------------------------------
+  # 1. Ruff — lint (E/W/F/I/UP/B/C4/SIM/RUF) + format
+  #    Single tool replacing: black, isort, flake8, pyupgrade
+  # -----------------------------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.3
+    hooks:
+      - id: ruff
+        name: ruff lint + auto-fix
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+        name: ruff format (black-compatible)
+
+  # -----------------------------------------------------------
+  # 2. General file hygiene
+  # -----------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: debug-statements
+      - id: detect-private-key
+
+  # -----------------------------------------------------------
+  # 3. pip-audit — dependency vulnerability scanner
+  #    Fails the commit if any package has a known CVE
+  # -----------------------------------------------------------
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.7.3
+    hooks:
+      - id: pip-audit
+        name: pip-audit (dependency safety)
+        args:
+          - --requirement=requirements-ci.txt
+
+  # -----------------------------------------------------------
+  # 4. Conventional Commits — enforce commit message format
+  # -----------------------------------------------------------
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.2.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, perf, docs, refactor, style, test, chore, ci]
