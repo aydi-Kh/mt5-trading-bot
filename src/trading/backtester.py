@@ -255,19 +255,9 @@ class BacktestEngine:
                 try:
                     if hasattr(model, "train_on_features"):
                         model.train_on_features(train_slice, train_mean, train_std)
-                    elif hasattr(model, "train") and hasattr(model, "model") and model.model is not None:
-                        import torch
-                        X = torch.tensor((train_slice - train_mean) / (train_std + 1e-8), dtype=torch.float32)
-                        # Simple direction labels from price changes
-                        prices = close_vals[start:test_start_idx]
-                        labels = []
-                        for k in range(len(prices)-1):
-                            diff = prices[k+1] - prices[k]
-                            labels.append(2 if diff > 0 else (0 if diff < 0 else 1))
-                        labels.append(1)
-                        y = torch.tensor(labels, dtype=torch.long)
-                        dataset = list(zip(X.unsqueeze(1), y))
-                        model.train(dataset, epochs=3)
+                    # DISABLED: walk-forward retraining overwrites pre-trained model
+                    # elif hasattr(model, "train") and hasattr(model, "model") and model.model is not None:
+                    #     pass
                 except Exception as _te:
                     pass
 
@@ -303,9 +293,7 @@ class BacktestEngine:
                                 expected = model.model.lstm.input_size
                                 actual = obs_input.shape[-1]
                                 if expected != actual:
-                                    from src.models.lstm_model import LSTMModel
-                                    model.__class__ = LSTMModel
-                                    model.__init__(input_dim=actual)
+                                    obs_input = obs_input[:, :, :expected]
                             signal_obj = model.predict(obs_input)
                             direction = int(signal_obj.direction)
                             confidence = float(signal_obj.confidence)

@@ -1634,7 +1634,7 @@ def main() -> int:
 
     event_intelligence = EventIntelligence(providers=providers, fail_safe_blocked=False, config=cfg)
 
-    bypass = ["TREND_ANGLE","EMA_SEQUENCE","MOMENTUM","SESSION_CLOSED","CONFIDENCE_THRESHOLD","MACRO_EVENT"] if cfg.mode == "backtest" else []
+    bypass = ["MACRO_EVENT"] if cfg.mode == "backtest" else []
     execution_filter = ExecutionFilter(bypass_layers=bypass,
         max_drawdown=cfg.max_drawdown if hasattr(cfg, "max_drawdown") else 0.15,
         config=cfg,
@@ -1672,7 +1672,9 @@ def main() -> int:
         model = PPOAgent(model_path=ppo_path if ppo_path.exists() else None)  # type: ignore
     elif cfg.algorithm == "lstm":
         lstm_path = args.model_dir / "lstm_xauusd.pt"
-        model = LSTMModel(model_path=lstm_path if lstm_path.exists() else None)  # type: ignore
+        lstm_dim_path = args.model_dir / "lstm_input_dim.txt"
+        lstm_input_dim = int(lstm_dim_path.read_text()) if lstm_dim_path.exists() else 140
+        model = LSTMModel(input_dim=lstm_input_dim, model_path=lstm_path if lstm_path.exists() else None)  # type: ignore
     elif cfg.algorithm == "transformer":
         transformer_path = args.model_dir / "transformer_xauusd.pt"
         # Standard input_dim is 140 for the current feature engineer
