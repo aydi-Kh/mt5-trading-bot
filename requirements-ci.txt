@@ -6,7 +6,7 @@
 # -- Core numeric / data -------------------------------------------
 numpy==1.26.4
 scipy==1.15.3
-scikit-learn==1.6.1
+scikit-learn==1.7.2
 pandas==2.2.3
 
 # -- Technical Analysis --------------------------------------------
