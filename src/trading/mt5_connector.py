@@ -96,13 +96,6 @@ class MT5Connector:
     def __init__(
         self, config: TradingConfig, monitor: Optional["Monitor"] = None
     ) -> None:
-        """
-        Initialize the connector with configuration.
-
-        Args:
-            config: TradingConfig object containing credentials and settings.
-            monitor: Optional Monitor instance for observability.
-        """
         self.cfg = config
         self.monitor = monitor
         self.use_metaapi: bool = False
@@ -112,7 +105,6 @@ class MT5Connector:
         self._is_initialized: bool = False
         self._background_tasks: set[asyncio.Task] = set()
 
-        # Circuit Breaker for connection, data retrieval and execution
         self.breaker = CircuitBreaker(
             name="MT5Connector",
             failure_threshold=5,
@@ -123,47 +115,31 @@ class MT5Connector:
 
     @property
     def circuit_state(self) -> str:
-        """Return the current state of the circuit breaker."""
         return self.breaker.state.value
 
     def connect(self) -> bool:
-        """Alias for initialize() to support legacy calls."""
         return self.initialize()
 
     def disconnect(self) -> None:
-        """Alias for shutdown() to support legacy calls."""
         self.shutdown()
 
     @with_retry(MT5ConnectionError, max_retries=3)
     def initialize(self) -> bool:
-        """
-        Establish connection to MT5 terminal or MetaAPI cloud.
-
-        Follows a dual-path strategy:
-        1. Native SDK: Attempt direct connection (Windows only).
-        2. MetaAPI Cloud: Fallback for Linux/Mac or remote deployments.
-
-        Returns:
-            bool: True if connection established successfully.
-
-        Raises:
-            MT5ConnectionError: If all connection paths fail after retries.
-            CircuitBreakerError: If the circuit is OPEN.
-        """
-        # Circuit Breaker check
         return self.breaker(self._initialize_logic)()
 
     def _initialize_logic(self) -> bool:
-        """Internal initialization logic wrapped by circuit breaker."""
+        if self.cfg.mode == "backtest":
+            logger.info("backtest_mode_skipping_mt5_connection")
+            self._is_initialized = True
+            return True
         logger.info(
             "mt5_connector_initialization_started",
             mode=self.cfg.mode,
             symbol=self.cfg.symbol,
             mt5_server=self.cfg.mt5_server,
         )
-        self.use_metaapi = False  # Reset state
+        self.use_metaapi = False
 
-        # 1. Attempt Native MT5 SDK (Primary Path - Windows only)
         if MT5_AVAILABLE:
             try:
                 logger.debug("native_mt5_sdk_initialization_attempt")
@@ -203,7 +179,6 @@ class MT5Connector:
                 reason="SDK not imported or platform incompatible",
             )
 
-        # 2. Attempt MetaAPI Cloud (Fallback Path - Linux/Mac/Cloud)
         metaapi_token = self.cfg.metaapi_token.get_secret_value() if self.cfg.metaapi_token else ""
         if METAAPI_AVAILABLE and metaapi_token and self.cfg.metaapi_account_id:
             logger.info("metaapi_fallback_initialization_attempt")
@@ -229,7 +204,6 @@ class MT5Connector:
                     await self.metaapi_connection.connect()
                     await self.metaapi_connection.wait_synchronized()
 
-                # Robust async execution ensuring we wait for completion
                 self._run_async(_init_metaapi())
 
                 self.use_metaapi = True
@@ -254,7 +228,6 @@ class MT5Connector:
         )
 
     def shutdown(self) -> None:
-        """Gracefully close all connections."""
         if self._is_initialized:
             if not self.use_metaapi and MT5_AVAILABLE:
                 mt5.shutdown()
@@ -265,7 +238,6 @@ class MT5Connector:
 
     @contextmanager
     def session(self):
-        """Context manager for safe connection handling."""
         try:
             if not self._is_initialized:
                 self.initialize()
@@ -274,17 +246,12 @@ class MT5Connector:
             self.shutdown()
 
     def get_ohlcv(self, symbol: str, timeframe: str, n_bars: int) -> pd.DataFrame:
-        """Alias for get_rates() to support legacy calls."""
         return self.get_rates(symbol, timeframe, n_bars)
 
     def _run_async(self, coro):
-        """Helper to run a coroutine in the appropriate event loop."""
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # This is tricky because we want the result synchronously in this sync method.
-                # nest_asyncio.apply() was called at the top, so we should be able to use asyncio.run
-                # or a loop.run_until_complete if we are in a thread.
                 return loop.run_until_complete(coro)
             else:
                 return asyncio.run(coro)
@@ -293,21 +260,9 @@ class MT5Connector:
 
     @with_retry((MT5DataError, MT5ConnectionError), max_retries=3)
     def get_rates(self, symbol: str, timeframe: str, n_bars: int) -> pd.DataFrame:
-        """
-        Fetch historical OHLCV data.
-
-        Args:
-            symbol: Trading symbol (e.g., XAUUSD).
-            timeframe: Chart timeframe (e.g., M5, H1).
-            n_bars: Number of bars to retrieve.
-
-        Returns:
-            pd.DataFrame: OHLCV data.
-        """
         return self.breaker(self._get_rates_logic)(symbol, timeframe, n_bars)
 
     def _get_rates_logic(self, symbol: str, timeframe: str, n_bars: int) -> pd.DataFrame:
-        """Internal data retrieval logic wrapped by circuit breaker."""
         if not self._is_initialized:
             logger.info("mt5_connector_auto_initialization")
             self.initialize()
@@ -319,7 +274,6 @@ class MT5Connector:
                 rates = mt5.copy_rates_from_pos(symbol, tf, 0, n_bars)
                 if rates is None:
                     err_code, err_desc = mt5.last_error()
-                    # If it's a connection-related error, trigger re-init for next retry
                     if err_code in [-1, 10001, 10002, 10003, 10004]:
                         logger.warning(
                             "mt5_data_connection_failure",
@@ -329,7 +283,7 @@ class MT5Connector:
                         )
                         self._is_initialized = False
 
-                    is_retriable = err_code not in [-2, -5, 10018]  # 10018: Market closed
+                    is_retriable = err_code not in [-2, -5, 10018]
                     raise MT5DataError(
                         f"Failed to copy rates: {err_desc} (code: {err_code})",
                         is_retriable=is_retriable,
@@ -338,7 +292,6 @@ class MT5Connector:
                 df["time"] = pd.to_datetime(df["time"], unit="s")
                 return df
             else:
-
                 candles = self._run_async(
                     self.metaapi_connection.get_historical_candles(symbol, timeframe, None, n_bars)
                 )
@@ -349,7 +302,6 @@ class MT5Connector:
         except Exception as e:
             if isinstance(e, (MT5DataError, MT5ConnectionError)):
                 raise
-            # For unexpected exceptions that might be connection-related
             logger.exception("Unexpected error in get_rates: %s", e)
             self._is_initialized = False
             raise MT5DataError(f"Unexpected data retrieval error: {e}") from e
@@ -358,17 +310,6 @@ class MT5Connector:
     def get_ticks_range(
         self, symbol: str, date_from: datetime, date_to: datetime
     ) -> pd.DataFrame:
-        """
-        Fetch historical tick data for a specific date range.
-
-        Args:
-            symbol: Trading symbol.
-            date_from: Start date.
-            date_to: End date.
-
-        Returns:
-            pd.DataFrame: Tick data (time, bid, ask, last, volume, etc.)
-        """
         return self.breaker(self._get_ticks_range_logic)(symbol, date_from, date_to)
 
     def _get_ticks_range_logic(
@@ -379,7 +320,6 @@ class MT5Connector:
 
         try:
             if not self.use_metaapi:
-                # Native MT5
                 ticks = mt5.copy_ticks_range(symbol, date_from, date_to, mt5.COPY_TICKS_ALL)
                 if ticks is None:
                     err_code, err_desc = mt5.last_error()
@@ -408,23 +348,30 @@ class MT5Connector:
     def get_rates_range(
         self, symbol: str, timeframe: str, date_from: datetime, date_to: datetime
     ) -> pd.DataFrame:
-        """
-        Fetch historical OHLCV data for a specific date range.
-
-        Args:
-            symbol: Trading symbol.
-            timeframe: Chart timeframe.
-            date_from: Start date.
-            date_to: End date.
-
-        Returns:
-            pd.DataFrame: OHLCV data.
-        """
         return self.breaker(self._get_rates_range_logic)(symbol, timeframe, date_from, date_to)
 
     def _get_rates_range_logic(
         self, symbol: str, timeframe: str, date_from: datetime, date_to: datetime
     ) -> pd.DataFrame:
+        """Internal data retrieval logic - lecture depuis fichier parquet local."""
+        import os
+        
+        clean_symbol = symbol.replace("#", "")
+        parquet_path = f"data/historical/{clean_symbol}_{timeframe}_2024.parquet"
+        
+        if os.path.exists(parquet_path):
+            logger.info("loading_data_from_parquet", path=parquet_path)
+            df = pd.read_parquet(parquet_path)
+            df["time"] = pd.to_datetime(df["time"])
+            
+            mask = (df["time"] >= pd.Timestamp(date_from)) & (df["time"] <= pd.Timestamp(date_to))
+            df = df.loc[mask]
+            
+            if df.empty:
+                raise MT5DataError(f"No data in parquet for {symbol} between {date_from} and {date_to}")
+            
+            return df
+        
         if not self._is_initialized:
             self.initialize()
 
@@ -432,7 +379,6 @@ class MT5Connector:
 
         try:
             if not self.use_metaapi:
-                # Native MT5 uses UTC timestamps
                 rates = mt5.copy_rates_range(symbol, tf, date_from, date_to)
                 if rates is None:
                     err_code, err_desc = mt5.last_error()
@@ -448,7 +394,6 @@ class MT5Connector:
                 df["time"] = pd.to_datetime(df["time"], unit="s")
                 return df
             else:
-                # MetaAPI uses ISO strings or dates
                 candles = self._run_async(
                     self.metaapi_connection.get_historical_candles(
                         symbol, timeframe, date_from, date_to
@@ -467,15 +412,6 @@ class MT5Connector:
 
     @with_retry((MT5DataError, MT5ConnectionError), max_retries=3)
     def get_tick(self, symbol: str) -> Dict[str, float]:
-        """
-        Retrieve latest symbol tick.
-
-        Args:
-            symbol: Trading symbol.
-
-        Returns:
-            Dict[str, float]: Bid, Ask, and Spread.
-        """
         return self.breaker(self._get_tick_logic)(symbol)
 
     def _get_tick_logic(self, symbol: str) -> Dict[str, float]:
@@ -514,24 +450,9 @@ class MT5Connector:
 
     @with_retry((MT5ExecutionError, MT5ConnectionError), max_retries=2)
     def place_order(self, signal: TradeSignal) -> Optional[int]:
-        """
-        Execute a market order based on a validated trade signal.
-
-        Args:
-            signal: Validated TradeSignal object.
-
-        Returns:
-            Optional[int]: Order ticket ID if successful.
-
-        Raises:
-            MT5ConnectionError: If not initialized or blocked by breaker.
-            MT5ExecutionError: If order is rejected.
-            CircuitBreakerError: If the circuit is OPEN.
-        """
         return self.breaker(self._place_order_logic)(signal)
 
     def _place_order_logic(self, signal: TradeSignal) -> Optional[int]:
-        """Internal order placement logic wrapped by circuit breaker."""
         if not self._is_initialized:
             self.initialize()
 
@@ -546,7 +467,6 @@ class MT5Connector:
         order_type = ORDER_TYPE_BUY if signal.direction > 0 else ORDER_TYPE_SELL
 
         if not self.use_metaapi:
-            # Note: get_tick is also wrapped by the breaker
             tick = self.get_tick(signal.symbol)
             price = tick["ask"] if order_type == ORDER_TYPE_BUY else tick["bid"]
 
@@ -575,8 +495,6 @@ class MT5Connector:
                     code=err_code,
                     symbol=signal.symbol,
                 )
-                # We don't necessarily want execution errors to trip the connection breaker
-                # unless they are connection related retcodes.
                 raise MT5ExecutionError(
                     f"Order send failed (None result): {err_desc} (code: {err_code})"
                 )
@@ -630,7 +548,6 @@ class MT5Connector:
                     symbol=signal.symbol,
                     error=str(e),
                 )
-                # Check if it is a connection error for MetaAPI
                 if "connection" in str(e).lower() or "timeout" in str(e).lower():
                     self._is_initialized = False
                     raise MT5ConnectionError(f"MetaAPI connection lost during order: {e}") from e
@@ -638,20 +555,16 @@ class MT5Connector:
                 raise MT5ExecutionError(f"MetaAPI order placement failed: {e}") from e
 
     def get_account_balance(self) -> float:
-        """Retrieve current account balance."""
         info = self.get_account_info()
-        # MT5 standard field is 'balance', MetaAPI is 'balance'
-        # Hardened to use direct key access so exceptions in get_account_info propagate
-        # and we don't accidentally return 0.0 on hidden failure.
         return float(info["balance"])
 
     @with_retry((MT5DataError, MT5ConnectionError), max_retries=3)
     def get_account_info(self) -> Dict[str, Any]:
-        """Retrieve account information."""
         return self.breaker(self._get_account_info_logic)()
 
     def _get_account_info_logic(self) -> Dict[str, Any]:
-        """Internal account information retrieval logic."""
+        if self.cfg.mode == "backtest":
+            return {"balance": 10000.0, "equity": 10000.0, "margin": 0.0, "margin_free": 10000.0, "margin_level": 0.0, "profit": 0.0}
         if not self._is_initialized:
             self.initialize()
 
@@ -672,11 +585,9 @@ class MT5Connector:
 
     @with_retry((MT5DataError, MT5ConnectionError), max_retries=3)
     def get_positions(self, symbol: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Retrieve open positions."""
         return self.breaker(self._get_positions_logic)(symbol)
 
     def _get_positions_logic(self, symbol: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Internal positions retrieval logic."""
         if not self._is_initialized:
             self.initialize()
 
@@ -697,14 +608,11 @@ class MT5Connector:
 
     @with_retry((MT5DataError, MT5ConnectionError), max_retries=3)
     def get_terminal_status(self) -> Dict[str, Any]:
-        """
-        Retrieve terminal status (e.g., algo trading enabled).
-        Ensures a consistent 'algo_trading' key is present.
-        """
         return self.breaker(self._get_terminal_status_logic)()
 
     def _get_terminal_status_logic(self) -> Dict[str, Any]:
-        """Internal terminal status retrieval logic."""
+        if self.cfg.mode == "backtest":
+            return {"algo_trading": True, "trade_allowed": True, "connected": True}
         if not self._is_initialized:
             self.initialize()
 
@@ -716,22 +624,36 @@ class MT5Connector:
                     self._is_initialized = False
                 raise MT5DataError(f"Failed to get terminal status: {err_desc} (code: {err_code})")
             data = info._asdict()
-            # Map 'trade_allowed' (terminal-wide algo trading button) to 'algo_trading' for clarity
             if "trade_allowed" in data:
                 data["algo_trading"] = data["trade_allowed"]
             return data
         else:
-            # MetaAPI doesn't have a direct equivalent for terminal 'algo_trading' button
-            # but we assume it's true if we can connect and synchronize.
             return {"algo_trading": True}
 
     @with_retry((MT5DataError, MT5ConnectionError), max_retries=3)
     def get_symbol_properties(self, symbol: str) -> Optional[Dict[str, Any]]:
-        """Retrieve symbol properties."""
         return self.breaker(self._get_symbol_properties_logic)(symbol)
 
     def _get_symbol_properties_logic(self, symbol: str) -> Dict[str, Any]:
-        """Internal symbol properties retrieval logic."""
+        """Internal symbol properties retrieval logic - lecture depuis parquet si disponible."""
+        import os
+        
+        clean_symbol = symbol.replace("#", "")
+        parquet_path = f"data/historical/{clean_symbol}_M5_2024.parquet"
+        
+        if os.path.exists(parquet_path):
+            logger.info("loading_symbol_properties_from_parquet", path=parquet_path)
+            df = pd.read_parquet(parquet_path)
+            
+            return {
+                "name": symbol,
+                "tradable": True,
+                "spread": int(df["spread"].mean()) if "spread" in df.columns else 20,
+                "digits": 2,
+                "point": 0.01,
+                "trade_contract_size": 100.0,
+            }
+        
         if not self._is_initialized:
             self.initialize()
 
@@ -768,11 +690,9 @@ class MT5Connector:
 
     @with_retry((MT5DataError, MT5ConnectionError), max_retries=3)
     def find_symbols(self, pattern: str) -> List[str]:
-        """Find symbols matching a pattern."""
         return self.breaker(self._find_symbols_logic)(pattern)
 
     def _find_symbols_logic(self, pattern: str) -> List[str]:
-        """Internal symbols discovery logic."""
         if not self._is_initialized:
             self.initialize()
 
@@ -785,8 +705,6 @@ class MT5Connector:
                 raise MT5DataError(f"Failed to find symbols with pattern {pattern}: {err_desc} (code: {err_code})")
             return [s.name for s in symbols]
         else:
-            # For MetaAPI, we'd need to fetch all and filter, which is slow.
-            # Return empty or a simple guess.
             return [pattern.upper()]
 
 

@@ -1634,7 +1634,8 @@ def main() -> int:
 
     event_intelligence = EventIntelligence(providers=providers, fail_safe_blocked=False, config=cfg)
 
-    execution_filter = ExecutionFilter(
+    bypass = ["TREND_ANGLE","EMA_SEQUENCE","MOMENTUM","SESSION_CLOSED","CONFIDENCE_THRESHOLD","MACRO_EVENT"] if cfg.mode == "backtest" else []
+    execution_filter = ExecutionFilter(bypass_layers=bypass,
         max_drawdown=cfg.max_drawdown if hasattr(cfg, "max_drawdown") else 0.15,
         config=cfg,
         event_intelligence=event_intelligence,

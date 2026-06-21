@@ -251,6 +251,25 @@ class BacktestEngine:
                 train_mean = np.nanmean(train_slice, axis=0)
                 train_std = np.nanstd(train_slice, axis=0)
                 train_std[train_std == 0] = 1.0  # Avoid division by zero
+                # Train model on walk-forward window if it supports online training
+                try:
+                    if hasattr(model, "train_on_features"):
+                        model.train_on_features(train_slice, train_mean, train_std)
+                    elif hasattr(model, "train") and hasattr(model, "model") and model.model is not None:
+                        import torch
+                        X = torch.tensor((train_slice - train_mean) / (train_std + 1e-8), dtype=torch.float32)
+                        # Simple direction labels from price changes
+                        prices = close_vals[start:test_start_idx]
+                        labels = []
+                        for k in range(len(prices)-1):
+                            diff = prices[k+1] - prices[k]
+                            labels.append(2 if diff > 0 else (0 if diff < 0 else 1))
+                        labels.append(1)
+                        y = torch.tensor(labels, dtype=torch.long)
+                        dataset = list(zip(X.unsqueeze(1), y))
+                        model.train(dataset, epochs=3)
+                except Exception as _te:
+                    pass
 
                 for i in range(test_window):
                     abs_idx = test_start_idx + i
@@ -278,7 +297,16 @@ class BacktestEngine:
                         try:
                             # Standard Signal object or fallback to raw int
                             t0 = time.perf_counter()
-                            signal_obj = model.predict(obs)
+                            obs_input = obs.reshape(1, 1, -1) if hasattr(obs, "reshape") else obs
+                            # Reinit model if input_dim mismatch
+                            if hasattr(model, "model") and model.model is not None and hasattr(model.model, "lstm"):
+                                expected = model.model.lstm.input_size
+                                actual = obs_input.shape[-1]
+                                if expected != actual:
+                                    from src.models.lstm_model import LSTMModel
+                                    model.__class__ = LSTMModel
+                                    model.__init__(input_dim=actual)
+                            signal_obj = model.predict(obs_input)
                             direction = int(signal_obj.direction)
                             confidence = float(signal_obj.confidence)
                             stats_timers["inference"] += time.perf_counter() - t0

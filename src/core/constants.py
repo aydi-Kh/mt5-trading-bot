@@ -13,7 +13,7 @@ from typing import Literal
 
 # --- Validation Patterns ---
 # Enforces institutional naming conventions for financial instruments.
-SYMBOL_PATTERN = r"^[A-Z0-9]{3,20}$"
+SYMBOL_PATTERN = r'^[A-Z0-9#\.]{3,20}$'
 
 # --- Timeframes ---
 # Strict Literal type for static analysis of trading intervals.

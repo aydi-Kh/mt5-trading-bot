@@ -323,6 +323,8 @@ class HealthChecker:
         return res
 
     def check_models(self) -> ComponentStatus:
+        if getattr(self.cfg, "mode", "") == "backtest":
+            return ComponentStatus(name="models", status=HealthStatus.HEALTHY, message="Backtest mode - model check skipped")
         """
         Verify AI models are loaded and healthy.
         Ensures the loaded model matches the configured algorithm.

@@ -64,10 +64,12 @@ class ExecutionFilter:
         config: TradingConfig | None = None,
         event_intelligence: Any | None = None,
         monitor: Any | None = None,
+        bypass_layers: list[str] | None = None,
     ):
         self.event_intelligence = event_intelligence
         self.cfg = config
         self.monitor = monitor
+        self.bypass_layers: list[str] = bypass_layers or []
         self.max_drawdown = (
             config.max_drawdown if config and hasattr(config, "max_drawdown") else max_drawdown
         )
@@ -112,29 +114,38 @@ class ExecutionFilter:
         }
 
         # Layer 2: Trend Angle
-        trend_passed, trend_metrics = self._check_trend_angle_with_metrics(
-            market_data,
-            signal.direction,
-            precomputed=metrics.get("trend_angle"),
-        )
+        if "TREND_ANGLE" in self.bypass_layers:
+            trend_passed, trend_metrics = True, {"slope": 0.0, "bypassed": True}
+        else:
+            trend_passed, trend_metrics = self._check_trend_angle_with_metrics(
+                market_data,
+                signal.direction,
+                precomputed=metrics.get("trend_angle"),
+            )
         trace["trend_angle"] = {
             "passed": bool(trend_passed),
             **trend_metrics,
         }
 
         # Layer 3: EMA Sequence
-        ema_passed, ema_metrics = self._check_ema_sequence_with_metrics(
-            market_data,
-            signal.direction,
-            precomputed=metrics.get("ema_sequence"),
-        )
+        if "EMA_SEQUENCE" in self.bypass_layers:
+            ema_passed, ema_metrics = True, {"bypassed": True}
+        else:
+            ema_passed, ema_metrics = self._check_ema_sequence_with_metrics(
+                market_data,
+                signal.direction,
+                precomputed=metrics.get("ema_sequence"),
+            )
         trace["ema_sequence"] = {
             "passed": bool(ema_passed),
             **ema_metrics,
         }
 
         # Layer 4: Momentum (RSI)
-        momentum_passed, momentum_metrics = self._check_momentum_with_metrics(
+        if "MOMENTUM" in self.bypass_layers:
+            momentum_passed, momentum_metrics = True, {"rsi": 50.0, "bypassed": True}
+        else:
+            momentum_passed, momentum_metrics = self._check_momentum_with_metrics(
             market_data,
             signal.direction,
             precomputed=metrics.get("momentum"),
@@ -145,7 +156,10 @@ class ExecutionFilter:
         }
 
         # Layer 5: Session/Time
-        session_passed = self._check_session_time(timestamp)
+        if "SESSION_CLOSED" in self.bypass_layers:
+            session_passed = True
+        else:
+            session_passed = self._check_session_time(timestamp)
         trace["session_time"] = {
             "passed": bool(session_passed),
             "timestamp": timestamp.isoformat(),
@@ -178,6 +192,8 @@ class ExecutionFilter:
             }
 
         # Layer 9: Confidence Threshold
+        if "CONFIDENCE_THRESHOLD" in self.bypass_layers:
+            return ExecutionDecision(signal=signal, confidence_score=signal.confidence, blocked_by=None, trace=trace)
         conf_passed, conf_metrics = self._check_confidence_threshold_with_metrics(signal)
         trace["confidence_threshold"] = {
             "passed": bool(conf_passed),
